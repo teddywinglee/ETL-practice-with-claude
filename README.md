@@ -10,6 +10,8 @@ Given a topic and post count, the pipeline:
 
 All LLM inference runs locally via [Ollama](https://ollama.com) — no API keys or cloud services required.
 
+![Sample report](examples/report_sample.png)
+
 ## Prerequisites
 
 - [Ollama](https://ollama.com) installed and running
