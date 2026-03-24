@@ -2,7 +2,9 @@ from datetime import datetime
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
-OUTPUT_FILE = Path("output/report.html")
+def _output_file() -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return Path(f"output/report_{timestamp}.html")
 
 
 def load(report_data: dict):
@@ -26,6 +28,7 @@ def load(report_data: dict):
         clusters=report_data["clusters"],
     )
 
-    OUTPUT_FILE.parent.mkdir(exist_ok=True)
-    OUTPUT_FILE.write_text(html, encoding="utf-8")
-    print(f"    Report saved to {OUTPUT_FILE}")
+    output_file = _output_file()
+    output_file.parent.mkdir(exist_ok=True)
+    output_file.write_text(html, encoding="utf-8")
+    print(f"    Report saved to {output_file}")

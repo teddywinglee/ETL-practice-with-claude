@@ -21,7 +21,7 @@ def run(theme: str):
     print("[3/3] Loading report...")
     load(report_data)
 
-    print("Done. Check output/report.html")
+    print("Done.")
 
 
 if __name__ == "__main__":

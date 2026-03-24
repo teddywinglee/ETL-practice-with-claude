@@ -27,7 +27,7 @@ def run(count: int, theme: str, languages: list[str] | None = None):
     print("[4/4] Loading report...")
     load(report_data)
 
-    print("Done. Check output/report.html")
+    print("Done.")
 
 
 if __name__ == "__main__":
