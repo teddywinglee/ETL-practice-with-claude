@@ -23,8 +23,8 @@ ollama pull llama3.1:8b
 ## Setup
 
 ```bash
-git clone <repo-url>
-cd etl-pipeline
+git clone https://github.com/teddywinglee/ETL-practice-with-claude
+cd ETL-practice-with-claude
 uv sync
 ```
 
@@ -55,12 +55,12 @@ Running stages separately is useful when iterating on the transform or report �
 | `--theme` | all | Topic for posts / report title |
 | `--languages` | `generate.py`, `run_all.py` | Comma-separated languages, e.g. `English,Mandarin,Spanish` |
 
-The report is saved to `output/report.html`.
+The report is saved to `output/report_<timestamp>.html`.
 
 ## Project Structure
 
 ```
-etl-pipeline/
+ETL-practice-with-claude/
 ├── generate.py          # Standalone: generate posts → data/posts.jsonl
 ├── main.py              # Standalone: run ETL on existing data/posts.jsonl
 ├── run_all.py           # Convenience: generate + ETL in one step
@@ -71,8 +71,11 @@ etl-pipeline/
 │   └── load.py          # Render HTML report via Jinja2
 ├── templates/
 │   └── report.html      # Jinja2 report template
+├── examples/            # Sample input and output (no need to run)
+│   ├── posts_sample.jsonl
+│   └── report_sample.html
 ├── data/                # Generated JSONL (git-ignored)
-└── output/              # Generated HTML report (git-ignored)
+└── output/              # Generated HTML reports (git-ignored)
 ```
 
 ## Design Notes
