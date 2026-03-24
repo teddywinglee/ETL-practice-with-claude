@@ -7,13 +7,16 @@ def _output_file() -> Path:
     return Path(f"output/report_{timestamp}.html")
 
 
-def load(report_data: dict):
-    # Compute overall dominant sentiment
+def _dominant_sentiment(clusters: list[dict]) -> str:
     totals = {"positive": 0, "neutral": 0, "negative": 0}
-    for cluster in report_data["clusters"]:
+    for cluster in clusters:
         for key, val in cluster["sentiment_breakdown"].items():
             totals[key] += val
-    overall_sentiment = max(totals, key=totals.get).capitalize()
+    return max(totals, key=totals.get).capitalize()
+
+
+def load(report_data: dict):
+    overall_sentiment = _dominant_sentiment(report_data["clusters"])
 
     env = Environment(loader=FileSystemLoader("templates"))
     template = env.get_template("report.html")
