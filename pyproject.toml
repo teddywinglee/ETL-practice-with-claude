@@ -1,0 +1,11 @@
+[project]
+name = "etl-pipeline"
+version = "0.1.0"
+description = "Local ETL pipeline that generates social media industry reports using a locally-hosted LLM"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "jinja2>=3.1.6",
+    "ollama>=0.6.1",
+    "requests>=2.32.5",
+]

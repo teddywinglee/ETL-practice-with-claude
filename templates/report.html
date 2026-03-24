@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ theme }} — Social Media Industry Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f7;
+      color: #1a1a2e;
+      line-height: 1.6;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 48px 64px 40px;
+    }
+    header .label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #7c8db5;
+      margin-bottom: 12px;
+    }
+    header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    header .meta {
+      font-size: 14px;
+      color: #7c8db5;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    /* Overview stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 24px 28px;
+      border-left: 4px solid #4a6fa5;
+    }
+    .stat-card .value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+    .stat-card .name {
+      font-size: 13px;
+      color: #6b7280;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Section heading */
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 20px;
+    }
+
+    /* Cluster cards */
+    .cluster {
+      background: #fff;
+      border-radius: 10px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .cluster-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .cluster-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+    .post-count {
+      font-size: 13px;
+      background: #eef2f9;
+      color: #4a6fa5;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    /* Sentiment bar */
+    .sentiment-bar {
+      display: flex;
+      height: 6px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      background: #e5e7eb;
+    }
+    .sentiment-bar .pos { background: #22c55e; }
+    .sentiment-bar .neu { background: #facc15; }
+    .sentiment-bar .neg { background: #ef4444; }
+
+    .sentiment-labels {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .sentiment-labels span {
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot.pos { background: #22c55e; }
+    .dot.neu { background: #facc15; }
+    .dot.neg { background: #ef4444; }
+
+    .summary {
+      font-size: 15px;
+      color: #374151;
+      border-left: 3px solid #4a6fa5;
+      padding-left: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* Posts toggle */
+    details summary {
+      font-size: 13px;
+      font-weight: 600;
+      color: #4a6fa5;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    details summary::before {
+      content: "▶";
+      font-size: 10px;
+      transition: transform 0.2s;
+    }
+    details[open] summary::before {
+      transform: rotate(90deg);
+    }
+    details summary::-webkit-details-marker { display: none; }
+
+    .posts-list {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .post {
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 14px 16px;
+      border: 1px solid #e5e7eb;
+    }
+    .post-text {
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    .post-meta {
+      font-size: 12px;
+      color: #9ca3af;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* Language chips */
+    .lang-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 40px;
+    }
+    .lang-chip {
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .lang-name { font-size: 14px; font-weight: 600; color: #1a1a2e; }
+    .lang-count {
+      font-size: 12px;
+      background: #eef2f9;
+      color: #4a6fa5;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* Language tag on posts */
+    .lang-tag {
+      font-size: 11px;
+      font-weight: 500;
+      color: #6b7280;
+      background: #f3f4f6;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .sentiment-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      text-transform: capitalize;
+    }
+    .sentiment-tag.positive { background: #dcfce7; color: #15803d; }
+    .sentiment-tag.neutral  { background: #fef9c3; color: #854d0e; }
+    .sentiment-tag.negative { background: #fee2e2; color: #b91c1c; }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="label">Social Media Industry Report</div>
+  <h1>{{ theme | title }}</h1>
+  <div class="meta">Generated {{ generated_at }} &nbsp;·&nbsp; {{ total_posts }} posts analysed</div>
+</header>
+
+<div class="container">
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="value">{{ total_posts }}</div>
+      <div class="name">Posts Analysed</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{ total_topics }}</div>
+      <div class="name">Topics Identified</div>
+    </div>
+    <div class="stat-card">
+      <div class="value">{{ overall_sentiment }}</div>
+      <div class="name">Dominant Sentiment</div>
+    </div>
+  </div>
+
+  {% if language_counts | length > 1 %}
+  <div class="section-title" style="margin-bottom: 12px;">Languages Detected</div>
+  <div class="lang-chips">
+    {% for lang, count in language_counts.items() | sort(attribute='1', reverse=True) %}
+    <div class="lang-chip">
+      <span class="lang-name">{{ lang }}</span>
+      <span class="lang-count">{{ count }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="section-title">Topic Breakdown</div>
+
+  {% for cluster in clusters %}
+  {% set total = cluster.post_count %}
+  {% set pos = cluster.sentiment_breakdown.positive %}
+  {% set neu = cluster.sentiment_breakdown.neutral %}
+  {% set neg = cluster.sentiment_breakdown.negative %}
+
+  <div class="cluster">
+    <div class="cluster-header">
+      <div class="cluster-title">{{ cluster.topic }}</div>
+      <div class="post-count">{{ cluster.post_count }} post{% if cluster.post_count != 1 %}s{% endif %}</div>
+    </div>
+
+    <div class="sentiment-bar">
+      {% if total > 0 %}
+      <div class="pos" style="width: {{ (pos / total * 100) | round }}%"></div>
+      <div class="neu" style="width: {{ (neu / total * 100) | round }}%"></div>
+      <div class="neg" style="width: {{ (neg / total * 100) | round }}%"></div>
+      {% endif %}
+    </div>
+    <div class="sentiment-labels">
+      <span><i class="dot pos"></i> {{ pos }} positive</span>
+      <span><i class="dot neu"></i> {{ neu }} neutral</span>
+      <span><i class="dot neg"></i> {{ neg }} negative</span>
+    </div>
+
+    <div class="summary">{{ cluster.summary }}</div>
+
+    <details>
+      <summary>View posts</summary>
+      <div class="posts-list">
+        {% for post in cluster.posts %}
+        <div class="post">
+          <div class="post-text">{{ post.text }}</div>
+          <div class="post-meta">
+            <span>{{ post.author.displayName }}</span>
+            <span class="sentiment-tag {{ post.sentiment }}">{{ post.sentiment }}</span>
+            {% if post.language %}<span class="lang-tag">{{ post.language }}</span>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+  </div>
+  {% endfor %}
+
+</div>
+
+<footer>Generated by ETL Pipeline &nbsp;·&nbsp; Powered by Ollama / llama3.1:8b</footer>
+
+</body>
+</html>
