@@ -1,5 +1,7 @@
 # ETL Pipeline
 
+[![CI](https://github.com/teddywinglee/ETL-practice-with-claude/actions/workflows/ci.yml/badge.svg)](https://github.com/teddywinglee/ETL-practice-with-claude/actions/workflows/ci.yml)
+
 A local ETL pipeline that generates a social media industry report using a locally-hosted LLM.
 
 Given a topic and post count, the pipeline:
