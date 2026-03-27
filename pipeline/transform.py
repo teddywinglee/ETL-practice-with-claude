@@ -1,9 +1,25 @@
+import time
+
 import ollama
 from collections import defaultdict
 from typing import Literal
 from pydantic import BaseModel
+from langdetect import detect, LangDetectException
 
 MODEL = "llama3.1:8b"
+
+MAX_RETRIES = 3
+
+VAGUE_TOPICS = {
+    "general", "other", "miscellaneous", "various", "misc",
+    "n/a", "none", "topic", "unknown",
+}
+
+LANG_CODE_MAP = {
+    "en": "English", "zh-cn": "Mandarin", "zh-tw": "Mandarin",
+    "es": "Spanish", "fr": "French", "de": "German",
+    "ja": "Japanese", "ko": "Korean", "pt": "Portuguese", "ar": "Arabic",
+}
 
 
 class PostTag(BaseModel):
@@ -21,27 +37,83 @@ class TopicMergeResult(BaseModel):
     mappings: list[TopicEntry]
 
 
+# ---------------------------------------------------------------------------
+# Guardrail helpers
+# ---------------------------------------------------------------------------
+
+def _llm_call_with_retry(**kwargs) -> ollama.ChatResponse:
+    """Call ollama.chat() with exponential-backoff retry on transient failures."""
+    last_err = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            return ollama.chat(**kwargs)
+        except Exception as e:
+            last_err = e
+            if attempt < MAX_RETRIES - 1:
+                wait = 2 ** attempt
+                print(f"    [retry {attempt+1}/{MAX_RETRIES}] {type(e).__name__}: {e} — retrying in {wait}s")
+                time.sleep(wait)
+    raise last_err
+
+
+def _validate_topic(label: str) -> bool:
+    """Reject vague or overly long topic labels."""
+    stripped = label.strip().lower()
+    if stripped in VAGUE_TOPICS:
+        return False
+    if len(label.split()) > 6:
+        return False
+    return True
+
+
+def _cross_check_language(text: str, llm_language: str) -> str:
+    """Log a warning if langdetect disagrees with the LLM's language label."""
+    try:
+        code = detect(text)
+        detected = LANG_CODE_MAP.get(code, code)
+        if detected.lower() != llm_language.lower():
+            print(f"    [lang-check] LLM said '{llm_language}', langdetect says '{detected}' for: {text[:60]}...")
+    except LangDetectException:
+        pass  # too short or ambiguous — not actionable
+    return llm_language
+
+
+# ---------------------------------------------------------------------------
+# Core LLM functions
+# ---------------------------------------------------------------------------
+
 def tag_post(post: dict) -> PostTag:
-    response = ollama.chat(
-        model=MODEL,
-        messages=[{
-            "role": "user",
-            "content": (
-                f"Analyze this social media post.\n\n"
-                f"Post: \"{post['text']}\"\n\n"
-                f"Detect the language of the post (return the language name only, e.g. 'English', 'Mandarin', 'Spanish'). "
-                f"Return a topic label (2-4 words) and sentiment. "
-                f"Always respond in English regardless of the post's language."
-            )
-        }],
-        format=PostTag.model_json_schema(),
+    base_prompt = (
+        f"Analyze this social media post.\n\n"
+        f"Post: \"{post['text']}\"\n\n"
+        f"Detect the language of the post (return the language name only, e.g. 'English', 'Mandarin', 'Spanish'). "
+        f"Return a topic label (2-4 words) and sentiment. "
+        f"Always respond in English regardless of the post's language."
     )
-    return PostTag.model_validate_json(response.message.content)
+    nudge = " Be specific — avoid generic labels like 'General' or 'Other'. Use 2-4 descriptive words."
+
+    tag = None
+    for attempt in range(MAX_RETRIES):
+        prompt = base_prompt if attempt == 0 else base_prompt + nudge
+        response = _llm_call_with_retry(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            format=PostTag.model_json_schema(),
+        )
+        tag = PostTag.model_validate_json(response.message.content)
+
+        if _validate_topic(tag.topic):
+            break
+        if attempt < MAX_RETRIES - 1:
+            print(f"    [topic-check] Vague topic '{tag.topic}' — retrying with stricter prompt")
+
+    _cross_check_language(post["text"], tag.language)
+    return tag
 
 
 def merge_topics(topics: list[str]) -> dict[str, str]:
     topics_list = "\n".join(f"- {t}" for t in topics)
-    response = ollama.chat(
+    response = _llm_call_with_retry(
         model=MODEL,
         messages=[{
             "role": "user",
@@ -58,7 +130,7 @@ def merge_topics(topics: list[str]) -> dict[str, str]:
 
 def summarize_cluster(topic: str, posts: list[dict]) -> str:
     posts_text = "\n".join(f"- {p['text']}" for p in posts)
-    response = ollama.chat(
+    response = _llm_call_with_retry(
         model=MODEL,
         messages=[{
             "role": "user",
@@ -73,14 +145,25 @@ def summarize_cluster(topic: str, posts: list[dict]) -> str:
     return response.message.content.strip()
 
 
+# ---------------------------------------------------------------------------
+# Orchestration
+# ---------------------------------------------------------------------------
+
 def transform(posts: list[dict]) -> dict:
-    # Step 1: tag each post individually
+    # Step 1: tag each post individually (skip failures gracefully)
     print(f"    Tagging {len(posts)} posts...")
     tagged = []
     for i, post in enumerate(posts):
-        tag = tag_post(post)
-        tagged.append({**post, "topic": tag.topic, "sentiment": tag.sentiment, "language": tag.language})
-        print(f"    [{i+1}/{len(posts)}] {post['author']['displayName']}: {tag.topic} ({tag.sentiment}, {tag.language})")
+        try:
+            tag = tag_post(post)
+            tagged.append({**post, "topic": tag.topic, "sentiment": tag.sentiment, "language": tag.language})
+            print(f"    [{i+1}/{len(posts)}] {post['author']['displayName']}: {tag.topic} ({tag.sentiment}, {tag.language})")
+        except Exception as e:
+            print(f"    [skip] Failed to tag post by {post['author']['displayName']}: {e}")
+            continue
+
+    if not tagged:
+        raise RuntimeError("All posts failed tagging — nothing to transform")
 
     # Step 2: merge similar topic labels into canonical ones
     unique_topics = list({p["topic"] for p in tagged})
@@ -94,11 +177,16 @@ def transform(posts: list[dict]) -> dict:
     for post in tagged:
         clusters[post["topic"]].append(post)
 
-    # Step 4: summarize each cluster
+    # Step 4: summarize each cluster (fallback on failure)
     print(f"    Summarizing {len(clusters)} topic(s)...")
     report_clusters = []
     for topic, cluster_posts in sorted(clusters.items(), key=lambda x: -len(x[1])):
-        summary = summarize_cluster(topic, cluster_posts)
+        try:
+            summary = summarize_cluster(topic, cluster_posts)
+        except Exception as e:
+            print(f"    [fallback] Summary failed for '{topic}': {e}")
+            summary = f"Summary unavailable for {topic} ({len(cluster_posts)} posts)."
+
         sentiment_counts = {"positive": 0, "neutral": 0, "negative": 0}
         for p in cluster_posts:
             sentiment_counts[p.get("sentiment", "neutral")] += 1
@@ -117,7 +205,7 @@ def transform(posts: list[dict]) -> dict:
         language_counts[lang] = language_counts.get(lang, 0) + 1
 
     return {
-        "total_posts": len(posts),
+        "total_posts": len(tagged),
         "total_topics": len(clusters),
         "language_counts": language_counts,
         "clusters": report_clusters,
