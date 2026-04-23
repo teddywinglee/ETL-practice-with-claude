@@ -67,23 +67,23 @@ def test_transform_totals(mock_tag, mock_merge, mock_summarize):
 # ---------------------------------------------------------------------------
 
 @patch("pipeline.transform.time.sleep")
-@patch("pipeline.transform.ollama.chat")
-def test_retry_succeeds_on_second_attempt(mock_chat, mock_sleep):
-    mock_chat.side_effect = [ConnectionError("timeout"), MagicMock(message=MagicMock(content='{"text":"ok"}'))]
+@patch("pipeline.transform.lm_studio.chat.completions.create")
+def test_retry_succeeds_on_second_attempt(mock_create, mock_sleep):
+    mock_create.side_effect = [ConnectionError("timeout"), MagicMock(choices=[MagicMock(message=MagicMock(content='{"text":"ok"}'))])]
     result = _llm_call_with_retry(model="test", messages=[])
-    assert mock_chat.call_count == 2
+    assert mock_create.call_count == 2
     mock_sleep.assert_called_once_with(1)  # 2**0 = 1
 
 
 @patch("pipeline.transform.time.sleep")
-@patch("pipeline.transform.ollama.chat", side_effect=ConnectionError("down"))
-def test_retry_exhausted_raises(mock_chat, mock_sleep):
+@patch("pipeline.transform.lm_studio.chat.completions.create", side_effect=ConnectionError("down"))
+def test_retry_exhausted_raises(mock_create, mock_sleep):
     try:
         _llm_call_with_retry(model="test", messages=[])
         assert False, "Should have raised"
     except ConnectionError:
         pass
-    assert mock_chat.call_count == 3
+    assert mock_create.call_count == 3
 
 
 # ---------------------------------------------------------------------------
@@ -109,8 +109,8 @@ def test_validate_topic_accepts_good():
 @patch("pipeline.transform._cross_check_language", return_value="English")
 @patch("pipeline.transform._llm_call_with_retry")
 def test_tag_post_retries_on_vague_topic(mock_llm, mock_lang):
-    vague_response = MagicMock(message=MagicMock(content='{"topic":"General","sentiment":"positive","language":"English"}'))
-    good_response = MagicMock(message=MagicMock(content='{"topic":"EV Adoption","sentiment":"positive","language":"English"}'))
+    vague_response = MagicMock(choices=[MagicMock(message=MagicMock(content='{"topic":"General","sentiment":"positive","language":"English"}'))])
+    good_response = MagicMock(choices=[MagicMock(message=MagicMock(content='{"topic":"EV Adoption","sentiment":"positive","language":"English"}'))])
     mock_llm.side_effect = [vague_response, good_response]
 
     from pipeline.transform import tag_post

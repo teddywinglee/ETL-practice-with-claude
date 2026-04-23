@@ -1,9 +1,8 @@
 import json
-import ollama
 from pathlib import Path
 from pydantic import BaseModel
+from pipeline.config import MODEL, lm_studio
 
-MODEL = "llama3.1:8b"
 DATA_FILE = Path("data/posts.jsonl")
 
 
@@ -39,13 +38,16 @@ def generate(count: int, theme: str, languages: list[str] | None = None):
         f"and a publishedDate as a Unix timestamp from the past 30 days."
     )
 
-    response = ollama.chat(
+    response = lm_studio.chat.completions.create(
         model=MODEL,
         messages=[{"role": "user", "content": prompt}],
-        format=PostList.model_json_schema(),
+        response_format={
+            "type": "json_schema",
+            "json_schema": {"name": "PostList", "schema": PostList.model_json_schema()},
+        },
     )
 
-    result = PostList.model_validate_json(response.message.content)
+    result = PostList.model_validate_json(response.choices[0].message.content)
 
     DATA_FILE.parent.mkdir(exist_ok=True)
     with open(DATA_FILE, "w", encoding="utf-8") as f:

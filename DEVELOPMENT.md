@@ -33,7 +33,7 @@ The constrained approach is more predictable but requires you to know your topic
 
 ## Structured output via Pydantic
 
-All LLM calls that return structured data use Ollama's `format` parameter with a Pydantic schema, rather than prompt-engineering the model to return JSON and then parsing it manually.
+All LLM calls that return structured data use the OpenAI `response_format` parameter with a Pydantic schema, rather than prompt-engineering the model to return JSON and then parsing it manually.
 
 The practical difference: `Literal["positive", "neutral", "negative"]` on the sentiment field means the model is *constrained* to those values at the token level — not just instructed. This produced noticeably better results: neutral sentiment tags started appearing where previously the model defaulted to positive for everything.
 
@@ -41,13 +41,13 @@ It also eliminated fragile `find("[")` / `find("{")` parsing hacks that would si
 
 ---
 
-## Model choice: llama3.1:8b over newer/larger models
+## Model choice
 
-llama4 models were available but not chosen. Reasons:
+The model is configured via `MODEL` in `pipeline/config.py` and served through LM Studio's local server. Reasons for keeping models in the 8B range:
 - 8B fits comfortably in 16GB VRAM and runs fast
 - Summarising social media posts doesn't require frontier-level reasoning
 - Larger models running heavily quantised to fit in memory often produce *worse* structured output, not better
-- Swapping the model later is a one-line change (`MODEL = "..."` in each pipeline stage)
+- Swapping the model later is a one-line change in `pipeline/config.py`
 
 ---
 
@@ -59,7 +59,7 @@ Original post text is preserved in its source language in the report. Translatin
 
 Language detection is surfaced as a metric in the report overview when more than one language is present.
 
-One honest limitation: llama3.1:8b generates noticeably lower quality Mandarin content than English or Spanish. For production use on CJK-heavy datasets, a model with stronger multilingual support (e.g. `qwen2.5`) would be a better fit — and the pipeline is designed to make that swap straightforward.
+One honest limitation: smaller models typically generate lower quality Mandarin content than English or Spanish. For production use on CJK-heavy datasets, a model with stronger multilingual support (e.g. `qwen2.5`) would be a better fit — and the pipeline is designed to make that swap straightforward via `pipeline/config.py`.
 
 ---
 

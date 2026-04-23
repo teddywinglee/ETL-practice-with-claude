@@ -25,17 +25,13 @@ uv run pytest tests/test_extract.py   # single file
 
 ## Prerequisites
 
-Ollama must be running locally with the model pulled:
-```bash
-ollama pull llama3.1:8b
-ollama serve
-```
+LM Studio must be running locally with a model loaded and the local server started (default: `http://localhost:1234`). Update `MODEL` in `pipeline/config.py` to match the model identifier shown in LM Studio.
 
 ## Architecture
 
 The pipeline has four stages, each in `pipeline/`:
 
-1. **Generate** (`pipeline/generate.py`) — LLM generates synthetic social media posts → `data/posts.jsonl`. Uses Ollama with Pydantic schemas via the `format` parameter for structured output (not prompt-engineered JSON).
+1. **Generate** (`pipeline/generate.py`) — LLM generates synthetic social media posts → `data/posts.jsonl`. Uses LM Studio's OpenAI-compatible API with Pydantic schemas via `response_format` for structured output (not prompt-engineered JSON).
 
 2. **Extract** (`pipeline/extract.py`) — Reads `data/posts.jsonl` line-by-line into memory.
 
@@ -49,7 +45,7 @@ Entry points: `run_all.py` (all stages), `main.py` (ETL only), `generate.py` (ge
 
 ## Key Design Decisions
 
-- **Model:** `llama3.1:8b` via Ollama — fits in 16GB VRAM, fast, swappable via one-line config change.
+- **Model:** Configured in `pipeline/config.py` (`MODEL`), served via LM Studio's OpenAI-compatible API. Swappable via one-line config change.
 - **Multilingual:** Posts preserved in source language; topic labels and summaries always output in English; language detection surfaced in report.
 - **No linting/type-checking configured** — tests are the sole CI validation gate.
 - `data/` and `output/` are git-ignored; `examples/` contains reference samples.

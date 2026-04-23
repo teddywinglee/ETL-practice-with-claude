@@ -1,12 +1,10 @@
 import time
 
-import ollama
 from collections import defaultdict
 from typing import Literal
 from pydantic import BaseModel
 from langdetect import detect, LangDetectException
-
-MODEL = "llama3.1:8b"
+from pipeline.config import MODEL, lm_studio
 
 MAX_RETRIES = 3
 
@@ -41,12 +39,12 @@ class TopicMergeResult(BaseModel):
 # Guardrail helpers
 # ---------------------------------------------------------------------------
 
-def _llm_call_with_retry(**kwargs) -> ollama.ChatResponse:
-    """Call ollama.chat() with exponential-backoff retry on transient failures."""
+def _llm_call_with_retry(**kwargs):
+    """Call lm_studio.chat.completions.create() with exponential-backoff retry on transient failures."""
     last_err = None
     for attempt in range(MAX_RETRIES):
         try:
-            return ollama.chat(**kwargs)
+            return lm_studio.chat.completions.create(**kwargs)
         except Exception as e:
             last_err = e
             if attempt < MAX_RETRIES - 1:
@@ -98,9 +96,12 @@ def tag_post(post: dict) -> PostTag:
         response = _llm_call_with_retry(
             model=MODEL,
             messages=[{"role": "user", "content": prompt}],
-            format=PostTag.model_json_schema(),
+            response_format={
+                "type": "json_schema",
+                "json_schema": {"name": "PostTag", "schema": PostTag.model_json_schema()},
+            },
         )
-        tag = PostTag.model_validate_json(response.message.content)
+        tag = PostTag.model_validate_json(response.choices[0].message.content)
 
         if _validate_topic(tag.topic):
             break
@@ -122,9 +123,12 @@ def merge_topics(topics: list[str]) -> dict[str, str]:
                 f"Keep distinct topics as-is.\n\n{topics_list}"
             )
         }],
-        format=TopicMergeResult.model_json_schema(),
+        response_format={
+            "type": "json_schema",
+            "json_schema": {"name": "TopicMergeResult", "schema": TopicMergeResult.model_json_schema()},
+        },
     )
-    result = TopicMergeResult.model_validate_json(response.message.content)
+    result = TopicMergeResult.model_validate_json(response.choices[0].message.content)
     return {entry.original: entry.canonical for entry in result.mappings}
 
 
@@ -142,7 +146,7 @@ def summarize_cluster(topic: str, posts: list[dict]) -> str:
             )
         }],
     )
-    return response.message.content.strip()
+    return response.choices[0].message.content.strip()
 
 
 # ---------------------------------------------------------------------------
